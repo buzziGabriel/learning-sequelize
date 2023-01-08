@@ -136,24 +136,38 @@ const Users = sequelize.define('user', {
         // Por padrao como em qualquer metodo get() de uma classe javascript, ele e quem eh acionado quando fazemos Users.username (que eh apenas uma key em uma instancia de Users)
         // Podemos usar isso sempre que quisermos manipular de alguma forma um dado antes de ele ser mostrado ao usuario
         // getters e setters no sequelzie nao suportam funcoes assincronas!
+        /*
         get() {
             const rawValue = this.getDataValue('username') // Essa funcao eh a mesma coisa que usar this.username, mas como a this.username chama a get() se fizermos dentro da prorpia get () isso gera um loop
             return rawValue.toUpperCase()
         }
+        */
     },
     password: {
         type: DataTypes.STRING,
         // getters e setters no sequelzie nao suportam funcoes assincronas!
         // O setter soh vai acrescentar passos nomento de inserir dados no banco usando qualquer metodo padrao do sequelize como o .create() antes do create inserir na base ele vai passar pelo set, se houver.
+        /*
         set(value) {
             const salt = bcrypt.genSaltSync(12); //Acrescenta um nivel a mais de protecao a criptografia
             const hash = bcrypt.hashSync(value, salt)
             this.setDataValue('password', hash)    
         }
+        */
     },
     age: {
         type: DataTypes.INTEGER,
-        defaultValue: 21
+        defaultValue: 21,
+        validate: { // Essa uma forma de criar uma validacao customizada
+            /*isOldEnough(value) {
+                if(value< 21) {
+                    throw new Error('Too young')
+                }
+            }*/
+            isNumeric: { // Se voce define a msnsagem ele ja considera o isNumeric: true
+                msg: 'U must enter a number for age' // Voce pode definir sua propria mensagem de erro mesmo para as validacoes prontas do sequelize
+            }
+        }
     },
     WittCodeRocks: {
         type: DataTypes.BOOLEAN,
@@ -161,6 +175,7 @@ const Users = sequelize.define('user', {
     },
     description: {
         type: DataTypes.STRING,
+        /*
         set(value) {
             const compressed = zlib.deflateSync(value).toString('base64');
             this.setDataValue('description', compressed)
@@ -170,22 +185,81 @@ const Users = sequelize.define('user', {
             const uncompressed = zlib.inflateSync(Buffer.from(value, 'base64'))
             return uncompressed.toString()
         }
+        */
     },
     // CAMPO VIRTUAL: Esse campo nao vai ficar quardado na base de dados, elem existe apenas para fazer processamentos com o sequelize
     // Pode ser usado quando queremos mostra para o usuario mais de uma coluna na tabela concatenada, ou realizar operacoes entre dados, como se fosse uma coluna separada (nova)
     aboutUser: {
         type: DataTypes.VIRTUAL,
+        /*
         get() {
             return `${this.username} ${this.description}`
+        }
+        */
+    },
+    email: {
+        type: DataTypes.STRING,
+        unique: true, // Torna este atributo unique
+        allowNull: true, // Colocamos como permitido um valor nulo para la na validacao tratarmos o caso
+        validate: {
+            //isEmail: true // Valida se eh email
+            //isIn: ['me@soccer.org', 'me@soccer.com']// Verifia se o valor do campo esta neste vetor
+            // Uma forma de modificar a mensagem em uma validacao que pede argumento: 
+            /*
+            isIn : {
+                args: ['me@soccer.org', 'me@soccer.com'],
+                msg: ' The provided email must be one of the ...'
+            } 
+            */
+           myEmailValidator(value) { // Aqui vemos se o email foi digitado e caso contrario mostramos o erro
+                if(value == null) {
+                    throw new Error('Please enter an email!')
+                }
+           }
         }
     }
 }, 
 {
     freezeTableName: true,
-    timestamps: false
+    timestamps: false,
+    validate: { //Usando o objeto de validacao aqui podemos fazer validacoes ModelWide, ou seja, que envolvem mais de um dos campos da tabela
+        // neste caso criamos uma validacao customizada para verificar se a senha digitada nao eh igual ao usuario
+        usernamePassMatch() {
+            if(this.username == this.password) {
+                throw new Error('Ur password connot be ur username')
+            } else {
+                console.log('soccer')
+            }
+        }
+    }
 })
 
+function myFunction() { // Funcao exemplo
+    console.log('RUNNING SQL STATEMENT!')
+}
+
 Users.sync({ alter: true }).then(()=>{
+
+    //return sequelize.query('UPDATE user SET age = 54 WHERE username = "CanetaAzul"') // Escrevendo a query diretamente, a .query() retorna o resultado da query e algumas informacoes adicionais sobre a execucao
+    //return sequelize.query('SELECT username FROM user', {type: Sequelize.QueryTypes.SELECT}) // Se especificarmos o tipo de query q estamos executando pode ser que essa informacao adicionao nao venha junto no resultado, por exemplo em uma query de select soh vem o resultado do select
+    //return sequelize.query('SELECT username FROM user', {model: Users}) // Quando especificamos a  model dessa forma o retorno do select vem em forma de instancias da model Users
+    
+    //return sequelize.query('SELECT username FROM user', {loggin: myFunction()}) // Isso serve apenas para mostrar uma mensagem ou executar algo antes de rodar query
+
+
+    // Usando o replacements evitamos SQL ingections no site
+    return sequelize.query('SELECT * FROM user WHERE username = :username', {
+        replacements: {username: 'CanetaAzul'},
+        plain: true // plain faz com que so retorne o primeiro encontrado e em forma de objeto
+    })
+
+    /*return Users.create({
+        username: 'CanetaAzul', 
+        password: 'CanetaAzul',
+        age: 21,
+        email: null // Temos uma validacao para impedir email null mas nao undefined, ou seja, se o campo email nao for adicionado no metodo create ele vai entrar na base normalmente.
+    })*/
+    
     /*
     return Users.findAll({attributes: [['username', 'myName'],['password', 'pwd']]}) // O .findAll() retorna um vetor com cada um dos registros da tabela de Users, para imprimir temos que fazer um loop q percorre cada um deles
                                                     // O segundo elemento de cada elemento do vetor de atributos da tabela que queremos mostrar serve como um 'as' do sql
@@ -300,13 +374,10 @@ Users.sync({ alter: true }).then(()=>{
     })
     */
 
-    return Users.findOne({where: {username: 'Wire'}})
+    
     
 }).then((data)=>{ 
-    console.log(data.username)
-    console.log(data.password)
-    console.log(data.description)
-    console.log(data.aboutUser)
+    console.log(data)
 })
 .catch((err)=>{
     console.log(err)
