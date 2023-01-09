@@ -51,79 +51,7 @@ const Users = sequelize.define('user', {
 })
 
 */
-
-// ---------------------- DIFERENTES FORMA DE INSERIR REGISTROS NA TABELA CRIADA ---------------------- //
-
-// Esse eh o codigo para sincronizar as models do sequelize com o banco de dados
-// a opcao force: true, exclui as tabelas do banco com o nome da que estamos querendo adicionar e a adiciona
-// a opcao alter: true, altera a tabela com o mesmo nome da que estamos sincronizando fazendo as modificacoes necessarias
-// por default o sequelize soh cria ou altera uma tabela se nao existir uma com o mesmo nome no banco\
-/*
-Users.sync({ alter: true }).then(()=>{
-    console.log('Table and model synced succesfully!')
-    /*
-    const user = Users.build({username: 'gabriel', password: '123', age: '22', WittCodeRocks: true}) // Aqui criamos uma instancia da model Users mas nao salvamos ainda na base
-    user.username = 'soccer' // Podemos mudar propriedades e valores antes de salvar
-    return user.save() // Essa eh a funcao que salva no banco de fato o novo objeto user
-    */
-    //utilizar essa forma de salvar no banco por vezes pode ser trabalhoso, por isso temos tambem o metodo .create()
-    /*
-    return Users.create({
-        username: 'WittCode',
-        password: 'subscribe',
-        age: 25,
-        WittCodeRocks: false
-    })
-    // O data que retorna no .then() do crete e um objeto javascript por isso podemos aplicar o .toJSON() direto nele, o que nao acontece no .bulkCreate()
-    
-    // Podemos acrescentar mais de um objeto de uma vez utilizando a funcao .bulkCreate() e passando um vetor com os objetos a serema gravados na base
-    // O bulkCrete nao eh uma boa opcao quando temos validacoes que sao feitas utilizando o sequelize pq ele nao valida cada um dos dados enviados, a nao ser que explicitemos essa opcao
-    return Users.bulkCreate([
-        {
-            username: 'Tom',
-            password: 'like',
-            age: 25,
-            WittCodeRocks: false
-        },
-        {
-            username: 'Mike',
-            password: '123231',
-            age: 31,
-        }
-    ], {validate: true}) // Assim habilitamos as validacoes no bulkCreate() mas isso nao eh eficiente do ponto de vista de recursos
-}).then((data)=>{ // O data que retorna do .bulkCreate() eh um vetor de objetos, por isso temos que fazer um loop e aplicar o .toJSON() em cada elemento do vetor
-    //data.decrement({age: 2}) // Podemos somar ou subtrair valores de campos numericos .decrement() ou .increment(), podemos fazer mais de um campo de uma vez por acrescentar o campo desejado no objeto de argumento
-    data.forEach((element)=>{
-
-        console.log(element.toJSON())
-    })
-    /*
-    data.username = 'pizza' // Podemos alterar parametros do objeto que esta sendo incluido no .then() do create e assim ele ja adiciona alterado quando damos o .save()
-    data.age = 28
-    return data.save({fields: ['age']})  // o .save() tambem e uma funcao assincrona por isso tambem precisa do seu .then()
-                                        // Podemos tambem especificar para o save os campos que queremos modificar dentro do .then() caso queiramos que apenas uma modificacao seja aplicada ao objeto
-    //return data.destroy() // podemos usar o .destroy() para eliminar o objeto e nao acrescentar nada na base de dados
-    //return data.reload() // ignora as modificacoes feitar no .then() do create e adiciona o objeto como foi originalmente mandado para o create()
-    
-}).then((data)=>{
-    //console.log('User Updated')
-    console.log('User Destroy')
-    console.log(data.toJSON())
-
-})
-.catch((err)=>{
-    console.log(err)
-})
-*/
-// Isso aqui server apenas para testar a conexao
-/*
-sequelize.authenticate().then(()=>{
-    console.log('Connection Succesful!')
-}).catch((err)=>{
-    console.log('Error connecting to database')
-})
-*/
-
+// Definindo a model de forma mais avancada
 const Users = sequelize.define('user', {
     user_id: {
         type: DataTypes.INTEGER,
@@ -221,7 +149,7 @@ const Users = sequelize.define('user', {
 }, 
 {
     freezeTableName: true,
-    timestamps: false,
+    timestamps: true, // Caso queiramos usar o recurso de paranoid table os timestamps precisam estar setados em true.
     validate: { //Usando o objeto de validacao aqui podemos fazer validacoes ModelWide, ou seja, que envolvem mais de um dos campos da tabela
         // neste caso criamos uma validacao customizada para verificar se a senha digitada nao eh igual ao usuario
         usernamePassMatch() {
@@ -231,8 +159,102 @@ const Users = sequelize.define('user', {
                 console.log('soccer')
             }
         }
-    }
+    },
+    paranoid: true, // Adiciona um campo timestamp na table: deletedAt que quando deletamos um registro da tabela ele apenas desativa ele e coloca a data e horario do delete nessa coluna.
+    deletedAt: 'destroyedAt' // Isso altera o nome do campo paranoid para um personalizado
+    // Com essa opcao de paranoid se quisermos realmente excluir um cadastro da tabela devemos settar a opcao force: true no comando destroy, segue exemplo abaixo:
+    // O sequelize nao retorna os registros que forem "deletados", ao menos que digitemos a query pura (raw query)
+    // Se quisermos que os metodos do sequelize mostrem os registro "deletados" tambem deve-se fazer o seguinto:
+    /*
+        User.findOne({paranoid: false}) // Acrescentar a opcao de paranoid false no metodo
+    */
+    /*
+        User.destroy({
+            where: {user_id: 23},
+            force: true // Com essa opcao mesmo com na tabela paranoid ele exclui a linha
+        })
+    */
+    // Quando usamos o paranoid table podemos recuperar um registro que foi "deletado"
+    /*
+        User.restore({
+            where: {user_id: 23}
+        })
+    */
 })
+
+// ---------------------- DIFERENTES FORMA DE INSERIR REGISTROS NA TABELA CRIADA ---------------------- //
+
+// Esse eh o codigo para sincronizar as models do sequelize com o banco de dados
+// a opcao force: true, exclui as tabelas do banco com o nome da que estamos querendo adicionar e a adiciona
+// a opcao alter: true, altera a tabela com o mesmo nome da que estamos sincronizando fazendo as modificacoes necessarias
+// por default o sequelize soh cria ou altera uma tabela se nao existir uma com o mesmo nome no banco\
+/*
+Users.sync({ alter: true }).then(()=>{
+    console.log('Table and model synced succesfully!')
+    /*
+    const user = Users.build({username: 'gabriel', password: '123', age: '22', WittCodeRocks: true}) // Aqui criamos uma instancia da model Users mas nao salvamos ainda na base
+    user.username = 'soccer' // Podemos mudar propriedades e valores antes de salvar
+    return user.save() // Essa eh a funcao que salva no banco de fato o novo objeto user
+    */
+    //utilizar essa forma de salvar no banco por vezes pode ser trabalhoso, por isso temos tambem o metodo .create()
+    /*
+    return Users.create({
+        username: 'WittCode',
+        password: 'subscribe',
+        age: 25,
+        WittCodeRocks: false
+    })
+    // O data que retorna no .then() do crete e um objeto javascript por isso podemos aplicar o .toJSON() direto nele, o que nao acontece no .bulkCreate()
+    
+    // Podemos acrescentar mais de um objeto de uma vez utilizando a funcao .bulkCreate() e passando um vetor com os objetos a serema gravados na base
+    // O bulkCrete nao eh uma boa opcao quando temos validacoes que sao feitas utilizando o sequelize pq ele nao valida cada um dos dados enviados, a nao ser que explicitemos essa opcao
+    return Users.bulkCreate([
+        {
+            username: 'Tom',
+            password: 'like',
+            age: 25,
+            WittCodeRocks: false
+        },
+        {
+            username: 'Mike',
+            password: '123231',
+            age: 31,
+        }
+    ], {validate: true}) // Assim habilitamos as validacoes no bulkCreate() mas isso nao eh eficiente do ponto de vista de recursos
+}).then((data)=>{ // O data que retorna do .bulkCreate() eh um vetor de objetos, por isso temos que fazer um loop e aplicar o .toJSON() em cada elemento do vetor
+    //data.decrement({age: 2}) // Podemos somar ou subtrair valores de campos numericos .decrement() ou .increment(), podemos fazer mais de um campo de uma vez por acrescentar o campo desejado no objeto de argumento
+    data.forEach((element)=>{
+
+        console.log(element.toJSON())
+    })
+    /*
+    data.username = 'pizza' // Podemos alterar parametros do objeto que esta sendo incluido no .then() do create e assim ele ja adiciona alterado quando damos o .save()
+    data.age = 28
+    return data.save({fields: ['age']})  // o .save() tambem e uma funcao assincrona por isso tambem precisa do seu .then()
+                                        // Podemos tambem especificar para o save os campos que queremos modificar dentro do .then() caso queiramos que apenas uma modificacao seja aplicada ao objeto
+    //return data.destroy() // podemos usar o .destroy() para eliminar o objeto e nao acrescentar nada na base de dados
+    //return data.reload() // ignora as modificacoes feitar no .then() do create e adiciona o objeto como foi originalmente mandado para o create()
+    
+}).then((data)=>{
+    //console.log('User Updated')
+    console.log('User Destroy')
+    console.log(data.toJSON())
+
+})
+.catch((err)=>{
+    console.log(err)
+})
+*/
+// Isso aqui server apenas para testar a conexao
+/*
+sequelize.authenticate().then(()=>{
+    console.log('Connection Succesful!')
+}).catch((err)=>{
+    console.log('Error connecting to database')
+})
+*/
+
+
 
 function myFunction() { // Funcao exemplo
     console.log('RUNNING SQL STATEMENT!')
