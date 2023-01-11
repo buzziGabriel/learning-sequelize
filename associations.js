@@ -39,7 +39,7 @@ Country.hasOne(Capital, {foreingKey: {
 // Eh recomendavel que todas as opcoes passadas aqui sejam passadas no belongsTo tambem
 */
 
-Country.hasOne(Capital, {onDelete: 'CASCATE'}) // usando a opcao onDelete: 'CASCATE' quando excluimos (destroy) um registro, todos os seu filhos sao apagados tambem
+//Country.hasOne(Capital, {onDelete: 'CASCATE'}) // usando a opcao onDelete: 'CASCATE' quando excluimos (destroy) um registro, todos os seu filhos sao apagados tambem
 // Eh recomendavel que todas as opcoes passadas aqui sejam passadas no belongsTo tambem
 
 // Neste caso, se fizermos capital.setCountry(country) tentando associar uma capital ja associada a um outro pais, o sequelize vai desmontar a associacao anterior e associar essa capital ao pais que especificamos.
